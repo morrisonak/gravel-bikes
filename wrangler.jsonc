@@ -36,7 +36,7 @@
 	// Environment variables
 	"vars": {
 		"ENVIRONMENT": "production",
-		"OPENCLAW_URL": "http://165.227.59.227:18789"
+		"OPENCLAW_URL": "https://virtual-chemistry-favor-raymond.trycloudflare.com"
 	},
 	// Secrets (set via wrangler secret put)
 	"env": {
