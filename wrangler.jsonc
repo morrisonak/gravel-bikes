@@ -36,7 +36,7 @@
 	// Environment variables
 	"vars": {
 		"ENVIRONMENT": "production",
-		"OPENCLAW_URL": "https://live-nest-petersburg-tend.trycloudflare.com"
+		"OPENCLAW_URL": "https://openclaw.learnsoaring.com"
 	},
 	// Secrets (set via wrangler secret put)
 	"env": {
