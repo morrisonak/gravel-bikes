@@ -1,261 +1,188 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
-import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
-import { auth } from '~/lib/auth'
-import { getDB, getBucket, getKV } from '~/utils/cloudflare'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
-
-interface DashboardData {
-  user: { id: string; name: string; email: string; createdAt: string }
-  stats: {
-    postCount: number
-    fileCount: number
-    totalFileSize: number
-    sessionCount: number
-    settingsCount: number
-  }
-  recentPosts: Array<{ id: number; title: string; created_at: string }>
-  recentFiles: Array<{ key: string; size: number; uploaded: string }>
-}
-
-const getDashboardData = createServerFn({ method: 'GET' }).handler(async (): Promise<DashboardData> => {
-  const headers = getRequestHeaders()
-  const cookie = headers.get('cookie')
-
-  if (!cookie) {
-    throw redirect({ to: '/login' })
-  }
-
-  const match = cookie.match(/auth_token=([^;]+)/)
-  const token = match ? match[1] : null
-
-  if (!token) {
-    throw redirect({ to: '/login' })
-  }
-
-  const result = await auth.getSession(token)
-  if (!result) {
-    throw redirect({ to: '/login' })
-  }
-
-  const db = getDB()
-  const bucket = getBucket()
-  const kv = getKV()
-
-  // Fetch stats in parallel
-  const [
-    postCountResult,
-    sessionCountResult,
-    recentPostsResult,
-    fileList,
-    kvKeys,
-  ] = await Promise.all([
-    db.prepare('SELECT COUNT(*) as count FROM posts').first<{ count: number }>(),
-    db.prepare('SELECT COUNT(*) as count FROM session WHERE userId = ? AND expiresAt > ?')
-      .bind(result.user.id, Date.now())
-      .first<{ count: number }>(),
-    db.prepare('SELECT id, title, created_at FROM posts ORDER BY created_at DESC LIMIT 5').all<{ id: number; title: string; created_at: string }>(),
-    bucket.list({ limit: 100 }),
-    kv.list({ limit: 100 }),
-  ])
-
-  // Calculate file stats
-  let totalFileSize = 0
-  const recentFiles: Array<{ key: string; size: number; uploaded: string }> = []
-
-  for (const obj of fileList.objects.slice(0, 5)) {
-    totalFileSize += obj.size
-    recentFiles.push({
-      key: obj.key,
-      size: obj.size,
-      uploaded: obj.uploaded.toISOString(),
-    })
-  }
-
-  // Add remaining file sizes
-  for (const obj of fileList.objects.slice(5)) {
-    totalFileSize += obj.size
-  }
-
-  return {
-    user: result.user,
-    stats: {
-      postCount: postCountResult?.count ?? 0,
-      fileCount: fileList.objects.length,
-      totalFileSize,
-      sessionCount: sessionCountResult?.count ?? 0,
-      settingsCount: kvKeys.keys.length,
-    },
-    recentPosts: recentPostsResult.results,
-    recentFiles,
-  }
-})
+import { createFileRoute } from '@tanstack/react-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 
 export const Route = createFileRoute('/dashboard')({
-  beforeLoad: async () => {
-    await getDashboardData()
-  },
-  loader: async () => {
-    return await getDashboardData()
-  },
-  component: DashboardPage,
-})
+  component: Dashboard,
+});
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
-}
+function Dashboard() {
+  const [prompt, setPrompt] = useState('');
+  const [title, setTitle] = useState('');
+  const queryClient = useQueryClient();
 
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
+  const { data: status, isLoading } = useQuery({
+    queryKey: ['metrics', 'status'],
+    queryFn: async () => {
+      const res = await fetch('/api/metrics/status');
+      return res.json();
+    },
+    refetchInterval: 30000,
+  });
 
-  if (diffMins < 1) return 'just now'
-  if (diffMins < 60) return `${diffMins} min ago`
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
-  return date.toLocaleDateString()
-}
+  const { data: cost } = useQuery({
+    queryKey: ['metrics', 'cost'],
+    queryFn: async () => {
+      const res = await fetch('/api/metrics/cost');
+      return res.json();
+    },
+    refetchInterval: 60000,
+  });
 
-function DashboardPage() {
-  const { user, stats, recentPosts, recentFiles } = Route.useLoaderData()
+  const { data: tasksData } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: async () => {
+      const res = await fetch('/api/tasks');
+      return res.json() as Promise<{ tasks: any[] }>;
+    },
+    refetchInterval: 5000,
+  });
+  const tasks = tasksData as any;
+
+  const createTaskMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, prompt }),
+      });
+      if (!res.ok) throw new Error('Failed to create task');
+      return res.json();
+    },
+    onSuccess: () => {
+      setPrompt('');
+      setTitle('');
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back, {user.name}!</p>
+    <div className="container mx-auto py-8 px-4">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">🌊 OpenClaw Control Panel</h1>
+        <p className="text-gray-600">Real-time monitoring and management</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard
-          title="Total Posts"
-          value={stats.postCount.toString()}
-          description="Posts in database"
-        />
-        <StatsCard
-          title="Total Files"
-          value={stats.fileCount.toString()}
-          description={`${formatBytes(stats.totalFileSize)} used`}
-        />
-        <StatsCard
-          title="KV Settings"
-          value={stats.settingsCount.toString()}
-          description="Stored key-value pairs"
-        />
-        <StatsCard
-          title="Active Sessions"
-          value={stats.sessionCount.toString()}
-          description="Your active sessions"
-        />
+      {/* Status Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-sm text-gray-600 mb-2">Gateway Status</div>
+          <div className="text-2xl font-bold">{(status as any)?.gateway?.ok ? '✓ Online' : '✗ Offline'}</div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-sm text-gray-600 mb-2">Active Sessions</div>
+          <div className="text-2xl font-bold">{(status as any)?.sessions?.activeSessions || 0}</div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-sm text-gray-600 mb-2">Daily Spend</div>
+          <div className="text-2xl font-bold">${(cost as any)?.dailySpend?.toFixed(2) || '0.00'}</div>
+          <div className="text-xs text-gray-500">{(cost as any)?.usagePercent || 0}% of budget</div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-sm text-gray-600 mb-2">Monthly Projection</div>
+          <div className="text-2xl font-bold">${(cost as any)?.estimatedMonthly?.toFixed(0) || '0'}</div>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Posts</CardTitle>
-            <CardDescription>Latest posts in the database</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recentPosts.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No posts yet</p>
-            ) : (
-              <div className="space-y-3">
-                {recentPosts.map((post) => (
-                  <ActivityItem
-                    key={post.id}
-                    action="Post"
-                    item={post.title}
-                    time={formatRelativeTime(post.created_at)}
-                  />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Tabs */}
+      <div className="space-y-4">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h2 className="text-xl font-bold mb-4">📊 Monitoring</h2>
+          <p className="text-gray-600">Model usage, agent health, and cron jobs coming soon...</p>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Files</CardTitle>
-            <CardDescription>Latest uploads to R2</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recentFiles.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No files uploaded</p>
-            ) : (
-              <div className="space-y-3">
-                {recentFiles.map((file) => (
-                  <ActivityItem
-                    key={file.key}
-                    action={formatBytes(file.size)}
-                    item={file.key}
-                    time={formatRelativeTime(file.uploaded)}
-                  />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common tasks</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <QuickAction label="New Post" href="/posts" />
-            <QuickAction label="Upload File" href="/files" />
-            <QuickAction label="View Profile" href="/profile" />
-            <QuickAction label="Settings" href="/settings" />
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h2 className="text-xl font-bold mb-4">⚙️ Control</h2>
+          <div className="flex gap-2">
+            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+              Trigger Heartbeat
+            </button>
+            <button className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+              Restart Gateway
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h2 className="text-xl font-bold mb-4">✅ Tasks</h2>
+          
+          {/* Task Input Form */}
+          <div className="mb-6 p-4 bg-gray-50 rounded border border-gray-200">
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Task Title</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., Analyze logs"
+                className="w-full px-3 py-2 border border-gray-300 rounded hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Prompt</label>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Give OpenClaw instructions..."
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            <button
+              onClick={() => createTaskMutation.mutate()}
+              disabled={!title || !prompt || createTaskMutation.isPending}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+            >
+              {createTaskMutation.isPending ? 'Creating...' : 'Create Task'}
+            </button>
+          </div>
+
+          {/* Task List */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-100 border-b">
+                <tr>
+                  <th className="px-4 py-2 text-left font-semibold">ID</th>
+                  <th className="px-4 py-2 text-left font-semibold">Title</th>
+                  <th className="px-4 py-2 text-left font-semibold">Status</th>
+                  <th className="px-4 py-2 text-left font-semibold">Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(tasks?.tasks || []).map((task: any) => (
+                  <tr key={task.id} className="border-b hover:bg-gray-50">
+                    <td className="px-4 py-2 text-gray-600">#{task.id}</td>
+                    <td className="px-4 py-2">{task.title}</td>
+                    <td className="px-4 py-2">
+                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                        task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        task.status === 'running' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {task.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-gray-600">
+                      {new Date(task.created_at * 1000).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {(!tasks?.tasks || tasks.tasks.length === 0) && (
+              <p className="text-center text-gray-500 py-4">No tasks yet</p>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h2 className="text-xl font-bold mb-4">📝 Logs</h2>
+          <p className="text-gray-600">Real-time log streaming coming soon...</p>
+        </div>
+      </div>
     </div>
-  )
-}
-
-function StatsCard({ title, value, description }: { title: string; value: string; description: string }) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardDescription>{title}</CardDescription>
-        <CardTitle className="text-3xl">{value}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </CardContent>
-    </Card>
-  )
-}
-
-function ActivityItem({ action, item, time }: { action: string; item: string; time: string }) {
-  return (
-    <div className="flex items-center justify-between text-sm gap-2">
-      <span className="truncate flex-1">
-        <span className="text-muted-foreground">{action}</span>{' '}
-        <span className="font-medium">{item}</span>
-      </span>
-      <span className="text-muted-foreground whitespace-nowrap">{time}</span>
-    </div>
-  )
-}
-
-function QuickAction({ label, href }: { label: string; href: string }) {
-  return (
-    <a
-      href={href}
-      className="flex items-center justify-center rounded-md border p-3 text-sm font-medium hover:bg-accent"
-    >
-      {label}
-    </a>
-  )
+  );
 }

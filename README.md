@@ -1,176 +1,143 @@
-# CF Template
+# Claw Panel
 
-Full-stack template with TanStack Start, Shadcn UI, and Cloudflare Workers featuring authentication, database, file storage, and KV.
-
-## Features
-
-- **Authentication** - Custom lightweight auth with email/password, sessions, and protected routes
-- **Database** - D1 serverless SQLite with posts CRUD example
-- **File Storage** - R2 object storage with upload/download/delete
-- **Key-Value Store** - KV namespace for settings and caching
-- **Protected Routes** - Dashboard and profile pages requiring authentication
-- **Modern UI** - Shadcn UI components with Tailwind CSS
+OpenClaw control and monitoring dashboard. Full-suite monitoring, task management, and gateway control.
 
 ## Stack
 
-- **TanStack Start** - Full-stack React framework with file-based routing and server functions
-- **Shadcn UI** - Accessible components built with Radix and Tailwind CSS
-- **Cloudflare Workers** - Edge deployment with 0ms cold starts
-- **D1** - Serverless SQLite database at the edge
-- **R2** - S3-compatible object storage with no egress fees
-- **KV** - Low-latency key-value storage
-- **Bun** - Fast JavaScript runtime for local development
+- **Frontend:** TanStack Start + React + Shadcn UI + Tailwind CSS
+- **Backend:** Cloudflare Workers + TanStack Server Functions
+- **Database:** D1 (Cloudflare SQLite)
+- **Storage:** R2 (optional, for logs/exports)
+- **Cache:** KV (optional, for performance)
 
-## Quick Start
+## Features
+
+### Monitoring
+- ✅ Gateway status (online/offline, uptime)
+- ✅ Active sessions & token usage
+- ✅ Cost tracking (daily/monthly spend)
+- ✅ Model usage breakdown (Haiku vs Sonnet)
+- ✅ Agent health & heartbeat logs
+- ✅ Cron job status & scheduling
+
+### Control
+- ✅ Trigger heartbeats manually
+- ✅ Restart gateway
+- ✅ Manage cron jobs (add/delete/update)
+- ✅ View real-time logs
+- ✅ Start/stop agents
+
+### Task Management
+- ✅ Create, edit, delete tasks
+- ✅ Track task status (pending, in-progress, completed)
+- ✅ Priority levels (low, medium, high)
+- ✅ Task history & completion tracking
+
+## Setup
+
+### 1. Create Cloudflare Resources
 
 ```bash
-# Install dependencies
-bun install
+cd ~/projects/claw-panel
 
-# Start development server
+# Create D1 database
+wrangler d1 create claw-panel-db
+
+# Copy the database_id into wrangler.jsonc
+```
+
+### 2. Set Environment Variables
+
+```bash
+# Set OpenClaw token (for API access)
+wrangler secret put OPENCLAW_TOKEN
+
+# Set OpenClaw URL (if not localhost)
+# Update OPENCLAW_URL in wrangler.jsonc
+```
+
+### 3. Install & Run Locally
+
+```bash
+bun install
 bun run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
 
-## Project Structure
-
-```
-src/
-├── components/       # UI components (Shadcn)
-├── lib/
-│   ├── auth.ts       # Authentication logic
-│   └── auth-client.ts # Client-side auth hooks
-├── routes/
-│   ├── api/          # API routes
-│   │   └── auth.$.ts # Auth endpoints
-│   ├── dashboard.tsx # Protected dashboard
-│   ├── profile.tsx   # Protected profile
-│   ├── posts.tsx     # Posts CRUD
-│   ├── files.tsx     # File management
-│   ├── settings.tsx  # KV settings
-│   ├── login.tsx     # Login page
-│   └── signup.tsx    # Signup page
-├── server/           # Server functions
-└── utils/
-    └── cloudflare.ts # CF bindings helpers
-```
-
-## Authentication
-
-Custom lightweight authentication using:
-- Web Crypto API for password hashing (SHA-256)
-- Secure session tokens with HttpOnly cookies
-- Protected route middleware via server functions
-
-### Auth Endpoints
-
-- `POST /api/auth/sign-up/email` - Create account
-- `POST /api/auth/sign-in/email` - Sign in
-- `POST /api/auth/sign-out` - Sign out
-- `GET /api/auth/get-session` - Get current session
-
-### Protected Routes
-
-Routes like `/dashboard` and `/profile` check authentication server-side and redirect to `/login` if not authenticated.
-
-## Deployment
-
-### 1. Create Cloudflare Resources
+### 4. Deploy to Production
 
 ```bash
-# Create D1 database
-wrangler d1 create cf-template-db
-
-# Create R2 bucket
-wrangler r2 bucket create cf-template-bucket
-
-# Create KV namespace
-wrangler kv namespace create KV
-```
-
-### 2. Configure wrangler.jsonc
-
-Update `wrangler.jsonc` with your resource IDs:
-
-```jsonc
-{
-  "d1_databases": [{
-    "binding": "DB",
-    "database_name": "cf-template-db",
-    "database_id": "YOUR_DATABASE_ID"
-  }],
-  "r2_buckets": [{
-    "binding": "BUCKET",
-    "bucket_name": "cf-template-bucket"
-  }],
-  "kv_namespaces": [{
-    "binding": "KV",
-    "id": "YOUR_KV_NAMESPACE_ID"
-  }]
-}
-```
-
-### 3. Set Secrets
-
-```bash
-# Set auth secret for password hashing
-wrangler secret put BETTER_AUTH_SECRET
-```
-
-### 4. Run Migrations
-
-```bash
-# Apply migrations to production
-bun run db:migrate:prod
-```
-
-### 5. Deploy
-
-```bash
+bun run db:migrate:prod  # Apply migrations
 bun run deploy
 ```
 
-## Database Commands
+## Database Schema
 
-```bash
-bun run db:migrate       # Apply migrations locally
-bun run db:migrate:prod  # Apply migrations to production
-bun run db:studio        # Open D1 Studio
-```
+### tasks
+- `id` (TEXT PRIMARY KEY)
+- `title` (TEXT NOT NULL)
+- `description` (TEXT)
+- `status` (pending | in-progress | completed)
+- `priority` (low | medium | high)
+- `created_at`, `updated_at`, `completed_at` (INTEGER)
+
+### metrics
+- `id` (TEXT PRIMARY KEY)
+- `timestamp` (INTEGER)
+- `daily_cost`, `monthly_cost` (REAL)
+- `daily_tokens_in`, `daily_tokens_out` (INTEGER)
+- `total_sessions`, `active_sessions` (INTEGER)
+
+### agent_logs
+- `id` (TEXT PRIMARY KEY)
+- `agent_id` (TEXT)
+- `status` (running | idle | error | offline)
+- `timestamp` (INTEGER)
+- `heartbeat_at` (INTEGER)
+- `error_message` (TEXT)
+
+### cron_jobs
+- `id` (TEXT PRIMARY KEY)
+- `name` (TEXT)
+- `schedule` (TEXT)
+- `next_run`, `last_run` (INTEGER)
+- `status` (TEXT)
+- `payload` (TEXT)
+
+## API Endpoints
+
+### Tasks
+- `GET /api/tasks` — List all tasks
+- `POST /api/tasks` — Create task
+- `PUT /api/tasks/:id` — Update task
+- `DELETE /api/tasks/:id` — Delete task
+
+### Metrics
+- `GET /api/metrics/status` — Gateway & session status
+- `GET /api/metrics/cost` — Cost data
+- `GET /api/metrics/models` — Model usage
+- `GET /api/metrics/agents` — Agent health
+- `GET /api/metrics/cron` — Cron jobs
+- `POST /api/metrics/cron` — Add cron job
+- `DELETE /api/metrics/cron/:id` — Delete cron job
+- `POST /api/metrics/heartbeat` — Trigger heartbeat
+- `POST /api/metrics/gateway-restart` — Restart gateway
 
 ## Environment Variables
 
 | Variable | Description |
-|----------|-------------|
-| `BETTER_AUTH_SECRET` | Secret key for password hashing (set via `wrangler secret`) |
+|---|---|
+| `OPENCLAW_URL` | OpenClaw gateway URL (default: http://localhost:18789) |
+| `OPENCLAW_TOKEN` | OpenClaw gateway token (set via wrangler secret) |
 | `ENVIRONMENT` | `development` or `production` |
 
-## API Examples
+## Next Steps
 
-### Create a Post
-
-```bash
-curl -X POST https://your-worker.workers.dev/api/posts \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Hello World", "content": "My first post"}'
-```
-
-### Upload a File
-
-```bash
-curl -X POST https://your-worker.workers.dev/api/files/upload \
-  -F "file=@/path/to/file.pdf"
-```
-
-### Sign Up
-
-```bash
-curl -X POST https://your-worker.workers.dev/api/auth/sign-up/email \
-  -H "Content-Type: application/json" \
-  -d '{"name": "John", "email": "john@example.com", "password": "password123"}'
-```
-
-## License
-
-MIT
+- [ ] Real-time WebSocket updates for metrics
+- [ ] Task scheduling integration with cron
+- [ ] Log streaming and filtering
+- [ ] Cost predictions & alerts
+- [ ] Agent resource monitoring (CPU, memory)
+- [ ] Session transcript viewer
+- [ ] Audit logs & access control
