@@ -42,33 +42,37 @@ export const Route = createFileRoute('/api/tasks/$')({
 
           const taskId = result.meta.last_row_id
 
-          // Execute task via chat completions (fire and forget for speed)
-          const { executeTask } = await import('~/server/openclaw')
-          executeTask(prompt).then(async ({ response }) => {
+          // Execute task synchronously via chat completions
+          try {
+            const { executeTask } = await import('~/server/openclaw')
+            const { response } = await executeTask(prompt)
             const completedAt = Math.floor(Date.now() / 1000)
             await db
               .prepare('UPDATE tasks SET status = ?, description = ?, completed_at = ? WHERE id = ?')
               .bind('completed', response, completedAt, taskId)
               .run()
-          }).catch(async (err: any) => {
+
+            return Response.json({
+              id: taskId,
+              title,
+              status: 'completed',
+              response,
+              created_at: now,
+            })
+          } catch (err: any) {
             await db
               .prepare('UPDATE tasks SET status = ?, description = ? WHERE id = ?')
               .bind('failed', String(err), taskId)
               .run()
-          })
 
-          // Mark as running immediately
-          await db
-            .prepare('UPDATE tasks SET status = ? WHERE id = ?')
-            .bind('running', taskId)
-            .run()
-
-          return Response.json({
-            id: taskId,
-            title,
-            status: 'running',
-            created_at: now,
-          })
+            return Response.json({
+              id: taskId,
+              title,
+              status: 'failed',
+              error: String(err),
+              created_at: now,
+            })
+          }
         } catch (error) {
           return Response.json({ error: String(error) }, { status: 500 })
         }
