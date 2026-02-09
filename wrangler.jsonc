@@ -1,6 +1,6 @@
 {
 	"$schema": "./node_modules/wrangler/config-schema.json",
-	"name": "claw-panel",
+	"name": "gravel-bikes",
 	"account_id": "8f38ca7ac12deb4d20f2af8a77970610",
 	"compatibility_date": "2025-01-13",
 	"compatibility_flags": [
@@ -9,41 +9,5 @@
 	"main": "@tanstack/react-start/server-entry",
 	"observability": {
 		"enabled": true
-	},
-	// D1 Database binding
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "claw-panel-db",
-			"database_id": "19a411fc-8c6f-4ffb-b7ac-b3f437d0cc93",
-			"migrations_dir": "migrations"
-		}
-	],
-	// R2 Storage binding (optional)
-	"r2_buckets": [
-		{
-			"binding": "BUCKET",
-			"bucket_name": "claw-panel-bucket"
-		}
-	],
-	// KV Namespace binding (optional)
-	"kv_namespaces": [
-		{
-			"binding": "KV",
-			"id": "26518db2e8d3496386c3eb446d0d4fee"
-		}
-	],
-	// Environment variables
-	"vars": {
-		"ENVIRONMENT": "production",
-		"OPENCLAW_URL": "https://openclaw.learnsoaring.com"
-	},
-	// Secrets (set via wrangler secret put)
-	"env": {
-		"production": {
-			"vars": {
-				"ENVIRONMENT": "production"
-			}
-		}
 	}
 }

@@ -1,5 +1,5 @@
 {
-  "name": "metavadvisors",
+  "name": "gravel-bikes",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -8,11 +8,7 @@
     "build": "vite build && tsc --noEmit",
     "preview": "vite preview",
     "deploy": "bun run build && wrangler deploy",
-    "cf-typegen": "wrangler types",
-    "postinstall": "bun run cf-typegen",
-    "db:migrate": "wrangler d1 migrations apply DB --local",
-    "db:migrate:prod": "wrangler d1 migrations apply DB --remote",
-    "db:studio": "wrangler d1 studio DB --local"
+    "cf-typegen": "wrangler types"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.4",
