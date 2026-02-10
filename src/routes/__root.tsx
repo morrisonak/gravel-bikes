@@ -11,6 +11,7 @@ import * as React from 'react'
 import { useState, useEffect } from 'react'
 import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary'
 import { NotFound } from '~/components/NotFound'
+import { SubscribeForm } from '~/components/SubscribeForm'
 import appCss from '~/styles/app.css?url'
 import { seo } from '~/utils/seo'
 
@@ -182,16 +183,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               <div>
                 <h4 className="font-semibold mb-3 text-sm uppercase tracking-wider text-muted-foreground">Newsletter</h4>
                 <p className="text-xs text-muted-foreground mb-3">Weekly gear deals and riding tips. No spam.</p>
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    placeholder="your@email.com"
-                    className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  <button className="bg-primary text-primary-foreground px-3 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity whitespace-nowrap">
-                    Join
-                  </button>
-                </div>
+                <SubscribeForm compact />
               </div>
             </div>
 

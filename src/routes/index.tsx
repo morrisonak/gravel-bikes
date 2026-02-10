@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { SubscribeForm } from '~/components/SubscribeForm'
 import { seo, seoLinks } from '~/utils/seo'
 
 export const Route = createFileRoute('/')({
@@ -90,15 +91,8 @@ function Home() {
             <p className="text-muted-foreground">
               We track prices on the best gravel bikes and gear. Get notified when something drops — plus exclusive reviews and riding tips.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto pt-2">
-              <input
-                type="email"
-                placeholder="your@email.com"
-                className="flex-1 px-4 py-3 rounded-lg bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              <button className="bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity whitespace-nowrap">
-                Subscribe
-              </button>
+            <div className="pt-2">
+              <SubscribeForm />
             </div>
             <p className="text-xs text-muted-foreground">No spam. Unsubscribe anytime. We never share your email.</p>
           </div>

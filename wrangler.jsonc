@@ -9,5 +9,11 @@
 	"main": "@tanstack/react-start/server-entry",
 	"observability": {
 		"enabled": true
-	}
+	},
+	"kv_namespaces": [
+		{
+			"binding": "SUBSCRIBERS",
+			"id": "da51bc10a0d248038d799f80fa6d68dd"
+		}
+	]
 }

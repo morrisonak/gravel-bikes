@@ -2,29 +2,14 @@ import { env } from 'cloudflare:workers'
 
 /**
  * Get the Cloudflare environment bindings
- * Use this in server functions to access D1, R2, etc.
  */
 export function getEnv(): Env {
   return env as Env
 }
 
 /**
- * Get the D1 database instance
+ * Get the SUBSCRIBERS KV namespace instance
  */
-export function getDB(): D1Database {
-  return getEnv().DB
-}
-
-/**
- * Get the R2 bucket instance
- */
-export function getBucket(): R2Bucket {
-  return getEnv().BUCKET
-}
-
-/**
- * Get the KV namespace instance
- */
-export function getKV(): KVNamespace {
-  return getEnv().KV
+export function getSubscribersKV(): KVNamespace {
+  return getEnv().SUBSCRIBERS
 }
