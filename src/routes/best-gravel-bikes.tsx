@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { seo } from '~/utils/seo'
+import { seo, seoLinks } from '~/utils/seo'
 
 export const Route = createFileRoute('/best-gravel-bikes')({
   head: () => ({
@@ -7,9 +7,12 @@ export const Route = createFileRoute('/best-gravel-bikes')({
       ...seo({
         title: 'Best Gravel Bikes 2026 — 8 Expert Picks for Every Budget | GravelRig',
         description: '8 best gravel bikes for 2026 tested and ranked. From the $1,099 Poseidon Redwood to the $6,500 Cervélo Áspero 5 — real rides, honest ratings, detailed specs.',
+        image: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=1200&q=80&auto=format',
+        path: '/best-gravel-bikes',
       }),
       { name: 'robots', content: 'index, follow' },
     ],
+    links: seoLinks({ path: '/best-gravel-bikes' }),
   }),
   component: BestGravelBikes,
 })
@@ -531,6 +534,24 @@ function BestGravelBikes() {
                   worstRating: 1,
                   ratingCount: 1,
                 },
+              },
+            })),
+          }),
+        }}
+      />
+      {/* FAQ Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: faqs.map((faq) => ({
+              '@type': 'Question',
+              name: faq.q,
+              acceptedAnswer: {
+                '@type': 'Answer',
+                text: faq.a,
               },
             })),
           }),

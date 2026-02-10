@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { seo } from '~/utils/seo'
+import { seo, seoLinks } from '~/utils/seo'
 
 export const Route = createFileRoute('/about')({
   head: () => ({
@@ -7,9 +7,12 @@ export const Route = createFileRoute('/about')({
       ...seo({
         title: 'About GravelRig — Our Team, Mission & Editorial Process | GravelRig',
         description: 'Learn about GravelRig, our editorial process, testing methodology, and affiliate disclosure. Independent gravel bike reviews by passionate riders.',
+        image: 'https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=1200&q=80&auto=format',
+        path: '/about',
       }),
       { name: 'robots', content: 'index, follow' },
     ],
+    links: seoLinks({ path: '/about' }),
   }),
   component: About,
 })

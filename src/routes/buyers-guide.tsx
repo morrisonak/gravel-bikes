@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { seo } from '~/utils/seo'
+import { seo, seoLinks } from '~/utils/seo'
 
 export const Route = createFileRoute('/buyers-guide')({
   head: () => ({
@@ -7,9 +7,12 @@ export const Route = createFileRoute('/buyers-guide')({
       ...seo({
         title: "Gravel Bike Buyer's Guide 2026 — Everything You Need to Know | GravelRig",
         description: 'Complete gravel bike buying guide: frame materials, groupsets, tire clearance, geometry, fit, and budget. Make an informed decision on your next gravel bike.',
+        image: 'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?w=1200&q=80&auto=format',
+        path: '/buyers-guide',
       }),
       { name: 'robots', content: 'index, follow' },
     ],
+    links: seoLinks({ path: '/buyers-guide' }),
   }),
   component: BuyersGuide,
 })

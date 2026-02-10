@@ -22,10 +22,13 @@ export const Route = createRootRoute({
       ...seo({
         title: 'GravelRig — Expert Gravel Bike Reviews & Gear Guides (2026)',
         description: 'Independent gravel bike reviews, gear guides, and buying advice from riders who actually ride. Find the perfect gravel bike and accessories for your next adventure.',
+        image: 'https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=1200&q=80&auto=format',
+        path: '/',
       }),
     ],
     links: [
       { rel: 'stylesheet', href: appCss },
+      { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
       { rel: 'icon', href: '/favicon.ico' },
     ],
   }),

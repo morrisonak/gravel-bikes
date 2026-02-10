@@ -1,12 +1,15 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { seo } from '~/utils/seo'
+import { seo, seoLinks } from '~/utils/seo'
 
 export const Route = createFileRoute('/')({
   head: () => ({
     meta: seo({
       title: 'GravelRig — Expert Gravel Bike Reviews & Gear Guides (2026)',
       description: 'Independent gravel bike reviews, gear guides, and buying advice from riders who actually ride. 8 bikes tested, 30+ products reviewed for 2026.',
+      image: 'https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=1200&q=80&auto=format',
+      path: '/',
     }),
+    links: seoLinks({ path: '/' }),
   }),
   component: Home,
 })

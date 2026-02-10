@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://gravel-bikes.jmorrison.workers.dev/sitemap.xml
